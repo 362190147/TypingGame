@@ -2,6 +2,7 @@
 #include"resource.h"
 #include "GameState.h"
 #include"hantei.h"
+#include "sql.h"
 #ifdef WIN32
 #define main() WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 #endif //
@@ -80,12 +81,15 @@ void drawbg() {
 
 int main()
 {
+#ifdef X64
+	sqlconnect();
+#endif
 	SetOutApplicationLogValidFlag(FALSE);
 	SetGraphMode(Width, Height, 32);
 #ifdef WIN32
 	ChangeWindowMode( TRUE );
 	SetWindowIconID(IDI_ICON1);//ウインドウのアイコンを変更する
-	SetWindowText(_T("日本語タイピングゲーム Ver1.0 BY362190147"));
+	SetWindowText(_T("日本語タイピングゲーム Ver1.1.0 BY362190147"));
 #endif
 
 	if ( DxLib_Init()==-1  ) return -1;
@@ -201,7 +205,10 @@ int main()
 
 		if(LyricKana[LyricKanaX]!=0)InputTime+=17;
 	}
-	DxLib_End( ); 
+	DxLib_End( );
+#ifdef X64
+	sqlClose();
+#endif
 	return 0;
 
 }

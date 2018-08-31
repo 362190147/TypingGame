@@ -3,6 +3,7 @@
 #include"stdlib.h"
 #include"math.h"
 #include"malloc.h"
+#include"sql.h";
 int Width = 1208;
 int Height = 690;
 SongDate song[MAXNUM];
@@ -31,7 +32,7 @@ int TotalLineY = 0;
 int IntervalX = 0;
 int IntervalY = 0;
 //文字颜色
-int KanaColor = 0;
+//int KanaColor = 0;
 const int white = 0xffffff;
 //错误信息存储变量
 TCHAR ErrorMessage[100];
@@ -113,6 +114,16 @@ int Alpha=0;
 //游戏模式
 int mode=0;//0为打字模式，1为方向键模式
 
+char* UnicodeToUtf8(const wchar_t* unicode)
+{
+	int len;
+	len = WideCharToMultiByte(CP_UTF8, 0, unicode, -1, NULL, 0, NULL, NULL);
+	char *szUtf8 = (char*)malloc(len + 1);
+	memset(szUtf8, 0, len + 1);
+	WideCharToMultiByte(CP_UTF8, 0, unicode, -1, szUtf8, len, NULL, NULL);
+	return szUtf8;
+}
+
 int GetTchar(TCHAR *tchar, int max)
 {
 	int i;
@@ -166,6 +177,7 @@ void MouseLoop()
 	MouseFR=MousePR;
 
 }
+
 //键盘按键检测
 void KeyBoard(char KeyBuf[],int Keys[][4])
 {	GetHitKeyStateAll(KeyBuf);
@@ -229,8 +241,8 @@ void LoadMassage(wchar_t *ScriptBuf,int *ScriptX,wchar_t *LoadBuf,int MaxNum)
 	int n=0;
 	for(int i=0;i<MaxNum;i++)
 	{	
-		if(ScriptBuf[*ScriptX+i]!=L'['&&ScriptBuf[*ScriptX+i]!=L']'&&ScriptBuf[*ScriptX+i]!=L';')
-			{LoadBuf[i]=ScriptBuf[*ScriptX+i];}
+		if (ScriptBuf[*ScriptX + i] != L'['&&ScriptBuf[*ScriptX + i] != L']'&&ScriptBuf[*ScriptX + i] != L';')
+		{LoadBuf[i]=ScriptBuf[*ScriptX+i];}
 		else
 			{n=i;i=MaxNum;}
 	}
@@ -251,25 +263,34 @@ void LoadLyric(wchar_t *ScriptBuf, int *ScriptX, wchar_t *lyric,wchar_t *lyricKa
 	{
 		if (ScriptBuf[*ScriptX + i] != L'['&&ScriptBuf[*ScriptX + i] != L']'&&ScriptBuf[*ScriptX + i] != L';')
 		{
+			//
 			if (ScriptBuf[*ScriptX + i] == L'(') {
-				i++;
+				lyric[l++] = ScriptBuf[*ScriptX + i++];
 				while (ScriptBuf[*ScriptX + i] != L')') {
 					lyricKana[k++] = ScriptBuf[*ScriptX + i];
-					i++;
+					lyric[l++] = ScriptBuf[*ScriptX + i++];
 				}
+				lyric[l++] = ScriptBuf[*ScriptX + i];
 				i++;
 				if (ScriptBuf[*ScriptX + i] == L'[') { n = i; break; }
 			}
 
-			if((ScriptBuf[*ScriptX + i] >= L'ぁ'&&ScriptBuf[*ScriptX + i] <= L'ヺ')
-				||(ScriptBuf[*ScriptX + i] >= L'A'&&ScriptBuf[*ScriptX + i] <= L'z')
-				||(ScriptBuf[*ScriptX + i] >= L'Ａ'&&ScriptBuf[*ScriptX + i] <= L'Ｚ')
+			if ((ScriptBuf[*ScriptX + i] >= L'ぁ'&&ScriptBuf[*ScriptX + i] <= L'ヺ')
+				|| (ScriptBuf[*ScriptX + i] >= L'A'&&ScriptBuf[*ScriptX + i] <= L'Z')
+				|| (ScriptBuf[*ScriptX + i] >= L'a'&&ScriptBuf[*ScriptX + i] <= L'z')
+				|| (ScriptBuf[*ScriptX + i] >= L'Ａ'&&ScriptBuf[*ScriptX + i] <= L'Ｚ')
 				|| (ScriptBuf[*ScriptX + i] >= L'ａ'&&ScriptBuf[*ScriptX + i] <= L'ｚ')
-				||(ScriptBuf[*ScriptX + i] >= L'0'&&ScriptBuf[*ScriptX + i] <= L'9')
+				|| (ScriptBuf[*ScriptX + i] >= L'0'&&ScriptBuf[*ScriptX + i] <= L'9')
 				|| (ScriptBuf[*ScriptX + i] >= L'０'&&ScriptBuf[*ScriptX + i] <= L'９')
-				)
+				) {
 				lyricKana[k++] = ScriptBuf[*ScriptX + i];
-			lyric[l++] = ScriptBuf[*ScriptX + i];
+				lyric[l++] = ScriptBuf[*ScriptX + i];
+			}
+			else
+			{
+				lyric[l++] = ScriptBuf[*ScriptX + i];
+			}
+			
 		}
 		else
 		{
@@ -301,11 +322,15 @@ int LoadScript(TCHAR *FileName,wchar_t ScriptBuf[],int *ScriptBufX,int MaxNum)
 			
 			//unicode判定
 			if(wcTemp!=0xfeff) {	
-				tsprintf(ErrorMessage,_T("%S はUnicodeファイルではありません"),FileName);
+				tsprintf(ErrorMessage,_T("%sはUnicodeファイルではありません"), FileName);
 #ifdef WIN32
 				MessageBox(NULL, ErrorMessage, _T("error"), MB_ICONERROR);
 #endif // WIN32	
 				return -1;
+			}
+			else {
+			
+			
 			}
 
 			//loadtitle
@@ -315,28 +340,39 @@ int LoadScript(TCHAR *FileName,wchar_t ScriptBuf[],int *ScriptBufX,int MaxNum)
 				//ScriptBuf[i]=fgetwc(fp);
 				FileRead_read(&(ScriptBuf[i]), 2, fp);
 				//LoadTextNum++;
-				if(ScriptBuf[i]==L'\n')//改行なら無視。
-					{ScriptBuf[i]=0;a=0;i-=2;}
+				if(ScriptBuf[i]==L'\n')//忽略换行。
+				{
+					ScriptBuf[i]=0;
+					a=0;
+					i-=2;
+				}
 				else if(ScriptBuf[i-1]==L'/'&&Script[i]==L'/')
-						{ScriptBuf[i]=0;a=1;i--;}
-					else if(ScriptBuf[i]==WEOF)
-							{ScriptBuf[i]=0;break;}
-						else if(a==1)
-								{ScriptBuf[i]=0;i--;}
+				{
+					ScriptBuf[i]=0;
+					a=1;
+					i--;
+				}
+				else if (ScriptBuf[i] == WEOF)
+				{
+					ScriptBuf[i] = 0; break;
+				}
+				else if (a == 1)
+				{
+					ScriptBuf[i] = 0; i--;
+				}
 			}
 			LoadedNum=i;
-			//fclose(fp);
 			FileRead_close(fp);
 			ScriptBufX=0;
 		}
 		else{	
-			swprintf(ErrorMessage,_T("%Sファイルがオーブンできません"),FileName);
+			swprintf(ErrorMessage,_T("%sファイルがオーブンできません"),FileName);
 			MessageBox(NULL,ErrorMessage,_T("error"),MB_ICONERROR);
 			return -1;
 		}
 	}
 	else{
-		swprintf(ErrorMessage,_T("%Sファイルがありません"),FileName);
+		swprintf(ErrorMessage,_T("%sファイルがありません"),FileName);
 		MessageBox(NULL,ErrorMessage,_T("error"),MB_ICONERROR);
 		return -1;
 	}
@@ -937,6 +973,11 @@ int  LoadList(TCHAR* DirName, TCHAR *ListPath, SongDate *songs)
 
 			//读取最高成绩 
 			{
+#ifdef X64
+				char *title = UnicodeToUtf8(song[n].title);
+				song[n].highScore=getScore(title);
+				free(title);
+#endif
 			}
 
 			// 读取最后时间
@@ -946,12 +987,12 @@ int  LoadList(TCHAR* DirName, TCHAR *ListPath, SongDate *songs)
 				if (Script[ScriptX] == L'[')
 				{
 					ScriptX++;
-					//コマンド
+					//如果是字母判断为命令
 					if (Script[ScriptX] >= L'a'&&Script[ScriptX] <= L'z')
 					{
 						LoadMassage(Script, &ScriptX, command, 100);
 					}
-					//判定時間ロード
+					//如果是数字判断为歌词时间
 					else if (Script[ScriptX] >= L'0'&&Script[ScriptX] <= L'9')
 					{
 						int min = 0;
@@ -1585,17 +1626,145 @@ int display()
 	
 	//画歌词
 	if(LyricKana[LyricKanaX]!=L'\0')
-	{	
-		DrawStringToHandle(lyric.x,lyric.y,Lyric,0xeeeeff,lyric.font,0xaaaaff);
-		wchar_t temp[2]={0};
+	{
+		int lrcX = 0;
+		int kanaX = 0;
+		int KanaColor = 0;
+		int *x = NULL;
+		int y = 0;
+		int x1 = 0;
+		int x2 = 0;
+		wchar_t temp[2] = { 0 };
+		/*
+		//完整歌词
+		DrawStringToHandle(lyric.x, lyric.y, Lyric, 0xeeeeff, lyric.font, 0xaaaaff);
+		//GetDrawStringSizeToHandle()
+		//假名
+		for (int i = 0; i<100; i++)
+		{
+			if (i < LyricKanaX) {
+				KanaColor = 0xff55ff;
+			}
+			else {
+				KanaColor = white;
+			}
+
+			temp[0] = LyricKana[i];
+			DrawStringToHandle(lyricKana.x + i * lyricKana.size, lyricKana.y, temp, KanaColor, lyricKana.font, 0xaaaaff);
+
+		}*/
+
 		
-		for(int i=0;i<100;i++)
-		{	
-			temp[0]=LyricKana[i];
-			if(i<LyricKanaX)KanaColor=0xff55ff;else KanaColor=white;
-			DrawStringToHandle(lyricKana.x+i*lyricKana.size,lyricKana.y,temp,KanaColor,lyricKana.font,0xfa5555);
-		
+		/*
+		x = lyric.x;
+		while (lrcX < 100 && kanaX < 100) {
+			if (kanaX < LyricKanaX) {
+				KanaColor = 0xff55ff;
+			}
+			else {
+				KanaColor = white;
+			}
+
+			if (Lyric[lrcX] != LyricKana[kanaX]) {
+				
+				if((Lyric[lrcX] >= L'ぁ'&&Lyric[lrcX] <= L'ヺ')
+					|| (Lyric[lrcX] >= L'A'&&Lyric[lrcX] <= L'Z')
+					|| (Lyric[lrcX] >= L'a'&&Lyric[lrcX] <= L'z')
+					|| (Lyric[lrcX] >= L'Ａ'&&Lyric[lrcX] <= L'Ｚ')
+					|| (Lyric[lrcX] >= L'ａ'&&Lyric[lrcX] <= L'ｚ')
+					|| (Lyric[lrcX] >= L'0'&&Lyric[lrcX] <= L'9')
+					|| (Lyric[lrcX] >= L'０'&&Lyric[lrcX] <= L'９')) 
+				{
+					temp[0] = LyricKana[kanaX++];
+					DrawStringToHandle(x1+x2, lyricKana.y, temp, KanaColor, lyricKana.font, 0xaaaaff);
+					x2+=GetDrawStringWidthToHandle(temp,2, lyricKana.font);
+						
+				}
+				else
+				{
+					//如果是汉字把定位到第一个汉字上面
+					if (Lyric[lrcX]>=0x4E00 ) {
+						if(x2 != -5)
+						{
+							x1 = x;
+							x2 = -5;
+						}
+					}
+					temp[0] = Lyric[lrcX++];
+					DrawStringToHandle(x, lyric.y, temp, KanaColor, lyric.font, 0xaaaaff);
+					x+=GetDrawStringWidthToHandle(temp, 2, lyric.font);
+					
+
+				}
+					
+			}else{
+				temp[0] = Lyric[lrcX++];
+				DrawStringToHandle(x, lyric.y, temp, KanaColor, lyric.font, 0xaaaaff);
+				x += GetDrawStringWidthToHandle(temp, 2, lyric.font);
+				kanaX++;
+			}
+			
 		}
+		//*/
+
+		///*
+		int isFirst = true;
+		int font = lyric.font;
+		x1 = lyric.x;
+		x2 = lyricKana.x;
+		x = &x1;
+		y = lyric.y;
+		while (lrcX < 100 && kanaX < 100) {
+			if (kanaX < LyricKanaX) {
+				KanaColor = 0xaaaaff;
+			}
+			else {
+				KanaColor = white;
+			}
+
+			if (Lyric[lrcX] == L'(') {
+				y = lyricKana.y;
+				font = lyricKana.font;
+				lrcX++;
+				x = &x2;
+				//continue;
+			}
+
+			if (Lyric[lrcX] == L')') {
+
+				y = lyric.y;
+				font = lyric.font;
+				lrcX++;
+				x = &x1;
+				//continue;
+			}
+
+			//如果是汉字把定位到第一个汉字上面
+			if (Lyric[lrcX]>= 0x4E00)
+			{
+				if (isFirst) {
+					x2 = x1;
+					isFirst = false;
+				}
+				
+			}
+			else
+			{
+				isFirst = true;
+			}
+
+			if (Lyric[lrcX] == LyricKana[kanaX]) {
+				kanaX++;
+			}
+
+			temp[0] = Lyric[lrcX++];
+			
+			DrawStringToHandle(*x, y, temp, KanaColor, font, 0xaaaaff);
+			*x += GetDrawStringWidthToHandle(temp, 2, font);
+		}
+		//*/
+	
+
 		temp[0]=LyricChar[LyricCharX];
 		DrawStringToHandle(lyricChar1.x-(lyricChar1.size-lyricChar2.size)/4, lyricChar1.y-(lyricChar1.size-lyricChar2.size)+5,temp,white,lyricChar1.font,0x5555ff);
 
@@ -1603,8 +1772,6 @@ int display()
 	}else{
 		SetDrawBlendMode(DX_BLENDMODE_ALPHA,128);
 		DrawStringToHandle(lyric.x,lyric.y,Lyric2,white,lyric.font,0x555555);
-		DrawStringToHandle(lyricKana.x,lyricKana.y,LyricKana2,white,lyricKana.font,0x555555);
-		//DrawStringToHandle(lyricChar1.x,lyricChar1.y,LyricChar,white,lyricChar1.font,0xff0000);
 		SetDrawBlendMode(DX_BLENDGRAPHTYPE_NORMAL,255);
 	}
 
@@ -1826,12 +1993,12 @@ int hantei()
 		if( Script[ScriptX2]==L'[')
 		{	
 			ScriptX2++;
-			//コマンド
+			//字母开头为命令
 			if(Script[ScriptX2]>=L'a'&&Script[ScriptX2]<=L'z')
 			{	
 				LoadMassage(Script,&ScriptX2,command,100);
 			}
-			//判定時間ロード
+			//数字开头为时间
 			else if(Script[ScriptX2]>=L'0'&&Script[ScriptX2]<=L'9')
 			{	int min=0;
 				int sec=0;

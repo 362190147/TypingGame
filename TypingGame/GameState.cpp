@@ -1,7 +1,8 @@
 ﻿#include"DxLib.h"
 #include "GameState.h"
 #include"hantei.h"
-#ifdef __ANDROID__
+#include "sql.h"
+#ifndef __ANDROID__
 #include"stdlib.h"
 #endif // 
 
@@ -28,7 +29,7 @@ int GameInit()
 	artist1.size = Width / 60;
 	artist2.size = Width / 70;
 	lyric.size = Width / 40;
-	lyricKana.size = Width / 60;
+	lyricKana.size = Width / 70;
 	lyricChar1.size = Width / 30;
 	lyricChar2.size = Width / 50;
 	mojiTime.size = Width / 60;
@@ -42,7 +43,7 @@ int GameInit()
 	lyricChar1.font = CreateFontToHandle(NULL, lyricChar1.size, 6, DX_FONTTYPE_ANTIALIASING_EDGE_4X4);
 	lyricChar2.font = CreateFontToHandle(NULL, lyricChar2.size, 6, DX_FONTTYPE_ANTIALIASING_EDGE_4X4);
 	mojiTime.font = CreateFontToHandle(NULL, mojiTime.size, 6, DX_FONTTYPE_ANTIALIASING_EDGE_4X4);
-	//lyricChar2.font=CreateFontToHandle(NULL,lyricChar2.size,6,DX_FONTTYPE_ANTIALIASING_EDGE_4X4);
+	//lyricChar2.font = title2.font;
 	//初始化位置
 	title1.x = Width / 20;
 	title1.y0 = Height / 2;
@@ -144,6 +145,11 @@ int GameScore()
 		HighClass[FileNum][1] = Class[1];
 		HighClass[FileNum][2] = Class[2];
 		TCHAR temp[100] = { 0 };
+#ifdef X64
+		char *title = UnicodeToUtf8(song[FileNum].title);
+		setScore(title, "test", Score);
+		free(title);
+#endif
 	}
 
 

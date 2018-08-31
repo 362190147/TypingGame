@@ -129,6 +129,7 @@ extern int MouseCR;
 //透明度READY
 extern int Alpha;
 
+extern char* UnicodeToUtf8(const wchar_t* unicode);
 //游戏模式
 extern int mode;//0为打字模式，1为方向键模式
 
@@ -136,7 +137,6 @@ extern void MouseLoop();
 extern void KeyBoard(char KeyBuf[], int Keys[][4]);
 extern  int CreateList(TCHAR *DirName,TCHAR *ListName);
 extern  int LoadScript(TCHAR *FileName,wchar_t ScriptBuf[],int *ScriptBufX,int MaxNum);
-//extern  int LoadList(TCHAR* DirName,TCHAR* ListPath,TCHAR FileName[][100],TCHAR FilePath[][100], TCHAR title[][100], TCHAR artist[][100]);
 extern  int LoadList(TCHAR* DirName, TCHAR* ListPath,SongDate* songs);
 
 extern  int display();
